@@ -1,0 +1,4 @@
+-- Create schemas
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS incidents;
+CREATE SCHEMA IF NOT EXISTS notifications;

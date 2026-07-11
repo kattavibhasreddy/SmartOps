@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: smartops-postgres
+    environment:
+      POSTGRES_USER: smartops_admin
+      POSTGRES_PASSWORD: smartops_password
+      POSTGRES_DB: smartops
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartops_admin -d smartops"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build: ./auth-service
+    container_name: smartops-auth
+    ports:
+      - "4001:4001"
+    env_file:
+      - ./auth-service/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  incident-service:
+    build: ./incident-service
+    container_name: smartops-incident
+    ports:
+      - "4002:4002"
+    env_file:
+      - ./incident-service/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  notification-service:
+    build: ./notification-service
+    container_name: smartops-notification
+    ports:
+      - "4003:4003"
+    env_file:
+      - ./notification-service/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    container_name: smartops-gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./gateway/.env
+    depends_on:
+      auth-service:
+        condition: service_started
+      incident-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+
+  frontend:
+    build: ./frontend
+    container_name: smartops-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      gateway:
+        condition: service_started
